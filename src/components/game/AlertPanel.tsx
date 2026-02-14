@@ -30,6 +30,7 @@ const URGENCY_TEXT = {
 
 export function AlertPanel() {
   const { state, selectAlert } = useGame();
+  const sortedAlerts = [...state.alerts].sort((a, b) => a.timeRemaining - b.timeRemaining);
 
   return (
     <motion.div
@@ -49,7 +50,7 @@ export function AlertPanel() {
       </div>
 
       {/* Alert list */}
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-2">
           <AnimatePresence mode="popLayout">
             {state.alerts.length === 0 ? (
@@ -66,13 +67,11 @@ export function AlertPanel() {
                 </p>
               </motion.div>
             ) : (
-              state.alerts
-                .sort((a, b) => a.timeRemaining - b.timeRemaining)
-                .map((alert) => (
+              sortedAlerts.map((alert) => (
                   <AlertCard
                     key={alert.id}
                     alert={alert}
-                    isActive={state.activeAlert?.id === alert.id}
+                    isActive={state.activeAlertId === alert.id}
                     onSelect={() => selectAlert(alert)}
                   />
                 ))

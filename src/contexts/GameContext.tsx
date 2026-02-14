@@ -10,7 +10,7 @@ const initialState: GameState = {
   score: 0,
   stability: 100,
   alerts: [],
-  activeAlert: null,
+  activeAlertId: null,
   completedTasks: 0,
   failedTasks: 0,
   streak: 0,
@@ -76,17 +76,28 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, status: 'gameOver' };
 
     case 'ADD_ALERT':
+      if (state.alerts.some((alert) =>
+        alert.id === action.payload.id ||
+        (alert.taskType === action.payload.taskType &&
+         alert.title === action.payload.title &&
+         alert.description === action.payload.description)
+      )) {
+        return state;
+      }
       return { ...state, alerts: [...state.alerts, action.payload] };
 
     case 'REMOVE_ALERT':
       return {
         ...state,
         alerts: state.alerts.filter(a => a.id !== action.payload),
-        activeAlert: state.activeAlert?.id === action.payload ? null : state.activeAlert,
+        activeAlertId: state.activeAlertId === action.payload ? null : state.activeAlertId,
       };
 
     case 'SELECT_ALERT':
-      return { ...state, activeAlert: action.payload };
+      return {
+        ...state,
+        activeAlertId: state.alerts.some(alert => alert.id === action.payload) ? action.payload : null,
+      };
 
     case 'COMPLETE_TASK': {
       const { alertId, bonus = 0 } = action.payload;
@@ -123,9 +134,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         streak: newStreak,
         maxStreak: Math.max(state.maxStreak, newStreak),
         alerts: state.alerts.filter(a => a.id !== alertId),
-        activeAlert: state.activeAlert?.id === alertId ? null : state.activeAlert,
-        stability: Math.min(100, state.stability + 2),
-        entropy: Math.max(0, state.entropy - 5),
+        activeAlertId: state.activeAlertId === alertId ? null : state.activeAlertId,
+        stability: Math.min(100, state.stability + 5),
+        entropy: Math.max(0, state.entropy - 8),
+        commandDebt: Math.max(0, state.commandDebt - 3),
         aiTrust: Math.min(100, state.aiTrust + 1),
         tier: newTier,
         unlockedPanels: newUnlocked,
@@ -146,8 +158,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         ...state,
         failedTasks: state.failedTasks + 1,
         streak: 0,
-        alerts: state.alerts.filter(a => a.id !== action.payload),
-        activeAlert: state.activeAlert?.id === action.payload ? null : state.activeAlert,
+        alerts: state.alerts.map((existing) =>
+          existing.id === action.payload
+            ? { ...existing, timeRemaining: Math.max(1, existing.timeRemaining - 2) }
+            : existing
+        ),
         stability: newStability,
         entropy: state.entropy + 10,
         commandDebt: state.commandDebt + 5,
@@ -185,7 +200,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         alerts: validAlerts,
-        activeAlert: validAlerts.find(a => a.id === state.activeAlert?.id) ? state.activeAlert : null,
+        activeAlertId: validAlerts.some(a => a.id === state.activeAlertId) ? state.activeAlertId : null,
         stability: Math.max(0, newStability),
         elapsedTime: state.elapsedTime + action.payload,
         failedTasks: state.failedTasks + expiredAlerts.length,
@@ -235,8 +250,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const gameLoopRef = useRef<NodeJS.Timeout | null>(null);
   const alertSpawnRef = useRef<NodeJS.Timeout | null>(null);
   const difficultyRef = useRef<NodeJS.Timeout | null>(null);
+  const spawnStateRef = useRef(state);
   const prevStateRef = useRef(state);
   const prevTierRef = useRef(state.tier);
+  const lastSpawnedTaskRef = useRef<TaskType | null>(null);
+
+  useEffect(() => {
+    spawnStateRef.current = state;
+  }, [state]);
 
   // Sound effects based on state changes
   useEffect(() => {
@@ -288,7 +309,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const startPlaying = useCallback(() => { dispatch({ type: 'START_GAME' }); }, []);
   const pauseGame = useCallback(() => { dispatch({ type: 'PAUSE_GAME' }); }, []);
   const resumeGame = useCallback(() => { dispatch({ type: 'RESUME_GAME' }); }, []);
-  const selectAlert = useCallback((alert: Alert) => { dispatch({ type: 'SELECT_ALERT', payload: alert }); }, []);
+  const selectAlert = useCallback((alert: Alert) => { dispatch({ type: 'SELECT_ALERT', payload: alert.id }); }, []);
   const completeTask = useCallback((alertId: string, bonus?: number) => { dispatch({ type: 'COMPLETE_TASK', payload: { alertId, bonus } }); }, []);
   const failTask = useCallback((alertId: string) => { dispatch({ type: 'FAIL_TASK', payload: alertId }); }, []);
 
@@ -306,25 +327,47 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // Alert spawning — only during playing
   useEffect(() => {
-    if (state.status === 'playing') {
-      const spawnAlert = () => {
-        const timeMult = Math.max(0.8, gameConfig.initialTimeMultiplier - state.tier * gameConfig.timeMultiplierDecayPerTier);
-        const alert = generateAlert(state.difficulty, state.entropy, state.aiTrust, state.unlockedPanels);
+    if (state.status !== 'playing') {
+      if (alertSpawnRef.current) clearTimeout(alertSpawnRef.current);
+      return;
+    }
+
+    const scheduleNext = (delay: number) => {
+      alertSpawnRef.current = setTimeout(() => {
+        const current = spawnStateRef.current;
+        if (current.status !== 'playing') return;
+
+        const activeTypes = new Set(current.alerts.map((alert) => alert.taskType));
+        let candidateTypes = current.unlockedPanels.filter((type) => !activeTypes.has(type));
+        if (candidateTypes.length === 0) candidateTypes = [...current.unlockedPanels];
+        if (candidateTypes.length > 1 && lastSpawnedTaskRef.current) {
+          candidateTypes = candidateTypes.filter((type) => type !== lastSpawnedTaskRef.current);
+        }
+        if (candidateTypes.length === 0) candidateTypes = [...current.unlockedPanels];
+
+        const timeMult = Math.max(0.8, gameConfig.initialTimeMultiplier - current.tier * gameConfig.timeMultiplierDecayPerTier);
+        const alert = generateAlert(current.difficulty, current.entropy, current.aiTrust, candidateTypes);
         alert.timeLimit = Math.round(alert.timeLimit * timeMult);
         alert.timeRemaining = alert.timeLimit;
+        lastSpawnedTaskRef.current = alert.taskType;
         dispatch({ type: 'ADD_ALERT', payload: alert });
 
         const baseInterval = Math.max(
           2000,
-          gameConfig.baseAlertIntervalMs - (state.difficulty * 300) - (state.entropy * 20) - (state.tier * gameConfig.alertIntervalReductionPerTier),
+          gameConfig.baseAlertIntervalMs -
+            (current.difficulty * 300) -
+            (current.entropy * 20) -
+            (current.tier * gameConfig.alertIntervalReductionPerTier),
         );
-        alertSpawnRef.current = setTimeout(spawnAlert, baseInterval + Math.random() * 1000);
-      };
+        scheduleNext(baseInterval + Math.random() * 1000);
+      }, delay);
+    };
 
-      alertSpawnRef.current = setTimeout(spawnAlert, 1000);
-    }
-    return () => { if (alertSpawnRef.current) clearTimeout(alertSpawnRef.current); };
-  }, [state.status, state.difficulty, state.entropy, state.aiTrust, state.tier]);
+    scheduleNext(1000);
+    return () => {
+      if (alertSpawnRef.current) clearTimeout(alertSpawnRef.current);
+    };
+  }, [state.status]);
 
   // Difficulty escalation
   useEffect(() => {

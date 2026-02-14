@@ -14,16 +14,30 @@ export function StartScreen({ onStart }: StartScreenProps) {
   ]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    const raf = window.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      const canFocus =
+        !active ||
+        active === document.body ||
+        active === document.documentElement;
+
+      if (canFocus) {
+        inputRef.current?.focus();
+      }
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = input.trim();
-    if (!trimmed) return;
+    const command = trimmed || 'START';
 
-    setHistory(prev => [...prev, { text: `> ${trimmed}`, type: 'input' }]);
+    setHistory(prev => [...prev, { text: `> ${command}`, type: 'input' }]);
 
-    if (trimmed === 'start' && !capsWarningShown) {
+    if (command === 'start' && !capsWarningShown) {
       setCapsWarningShown(true);
       setHistory(prev => [...prev, {
         text: 'ERROR: CAPS LOCK REQUIRED. This is a PROFESSIONAL system. Try again.',
@@ -33,14 +47,14 @@ export function StartScreen({ onStart }: StartScreenProps) {
       return;
     }
 
-    if (trimmed.toUpperCase() === 'START') {
+    if (command.toUpperCase() === 'START') {
       setHistory(prev => [...prev, { text: 'INITIALIZING...', type: 'system' }]);
       setTimeout(() => onStart(false), 500);
       return;
     }
 
     setHistory(prev => [...prev, {
-      text: `UNKNOWN COMMAND: "${trimmed}". Type START to begin.`,
+      text: `UNKNOWN COMMAND: "${command}". Type START to begin.`,
       type: 'error',
     }]);
     setInput('');

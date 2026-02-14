@@ -27,7 +27,7 @@ export function TaskGrid() {
 
   return (
     <div
-      className="h-full grid grid-cols-2 lg:grid-cols-3 gap-4"
+      className="h-full min-h-0 grid grid-cols-2 lg:grid-cols-3 auto-rows-fr gap-4"
       role="grid"
       aria-label="Task tiles grid"
     >
@@ -76,7 +76,7 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
   return (
     <motion.div
       layout
-      className={`relative h-full min-h-[220px] border-2 bg-card/30 backdrop-blur-sm
+      className={`relative h-full min-h-0 max-h-full border-2 bg-card/30 backdrop-blur-sm
                   flex flex-col transition-all overflow-hidden
                   ${urgencyClass} ${hasPending ? '' : 'opacity-50'} ${focusClass}
                   ${isLocked ? 'opacity-30' : ''}`}
@@ -100,7 +100,7 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-inherit/30 bg-card/50">
+      <div className="shrink-0 flex items-center justify-between p-3 border-b border-inherit/30 bg-card/50">
         <div className="flex items-center gap-2">
           <span className="font-mono text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
             {hotkey}
@@ -131,7 +131,7 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
       </div>
 
       {/* Content area */}
-      <div className="flex-1 relative">
+      <div className="flex-1 min-h-0 relative overflow-hidden">
         <AnimatePresence mode="wait">
           {hasPending && !isLocked ? (
             <motion.div
@@ -139,7 +139,7 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0"
+              className="absolute inset-0 overflow-y-auto"
             >
               <ActiveTileContent type={type} alert={alert!} />
             </motion.div>
@@ -149,7 +149,7 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+              className="absolute inset-0 px-2 flex flex-col items-center justify-center gap-2 overflow-hidden"
             >
               {!isLocked && (
                 <>
@@ -179,7 +179,7 @@ function ActiveTileContent({ type, alert }: { type: TaskType; alert: Alert }) {
   if (!TileComponent) return null;
 
   return (
-    <div className="h-full p-2">
+    <div className="h-full p-2 overflow-y-auto">
       <TileComponent alert={alert} compact />
     </div>
   );

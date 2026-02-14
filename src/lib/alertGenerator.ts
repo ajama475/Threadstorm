@@ -73,6 +73,7 @@ export function generateAlert(difficulty: number, entropy: number, aiTrust: numb
     timeLimit,
     timeRemaining: timeLimit,
     createdAt: Date.now(),
+    status: 'active',
     isDecoy,
   };
 }

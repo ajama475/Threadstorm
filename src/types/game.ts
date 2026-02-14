@@ -18,6 +18,7 @@ export interface Alert {
   timeLimit: number;
   timeRemaining: number;
   createdAt: number;
+  status: 'active';
   isDecoy?: boolean;
 }
 
@@ -40,7 +41,7 @@ export interface GameState {
   score: number;
   stability: number;
   alerts: Alert[];
-  activeAlert: Alert | null;
+  activeAlertId: string | null;
   completedTasks: number;
   failedTasks: number;
   streak: number;
@@ -78,7 +79,7 @@ export type GameAction =
   | { type: 'END_GAME' }
   | { type: 'ADD_ALERT'; payload: Alert }
   | { type: 'REMOVE_ALERT'; payload: string }
-  | { type: 'SELECT_ALERT'; payload: Alert }
+  | { type: 'SELECT_ALERT'; payload: string }
   | { type: 'COMPLETE_TASK'; payload: { alertId: string; bonus?: number } }
   | { type: 'FAIL_TASK'; payload: string }
   | { type: 'UPDATE_STABILITY'; payload: number }

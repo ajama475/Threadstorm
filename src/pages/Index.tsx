@@ -5,7 +5,6 @@ import { StartScreen } from '@/components/game/StartScreen';
 import { TutorialOverlay } from '@/components/game/TutorialOverlay';
 import { GameDashboard } from '@/components/game/GameDashboard';
 import { GameOver } from '@/components/game/GameOver';
-import { AICommentary } from '@/components/game/AICommentary';
 import { DangerPulse } from '@/components/game/DangerPulse';
 import { PopupsManager } from '@/components/game/PopupsManager';
 import { BlindModeAudioManager } from '@/components/game/BlindModeAudioManager';
@@ -51,7 +50,6 @@ function GameContent() {
       )}
       {(state.status === 'playing' || state.status === 'paused') && (
         <>
-          <AICommentary />
           <DangerPulse />
           <PopupsManager />
         </>

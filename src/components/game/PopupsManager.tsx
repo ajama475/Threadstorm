@@ -38,7 +38,7 @@ export function PopupsManager() {
   const [popup, setPopup] = useState<PopupData | null>(null);
   const lastTrashRef = useRef(0);
   const lastSpeedRef = useRef(0);
-  const prevFailed = useRef(state.failedTasks);
+  const prevStability = useRef(state.stability);
   const prevCompleted = useRef(state.completedTasks);
 
   const dismiss = useCallback(() => setPopup(null), []);
@@ -46,27 +46,35 @@ export function PopupsManager() {
   // Reset refs on new run
   useEffect(() => {
     if (state.status === 'playing' && state.completedTasks === 0) {
-      prevFailed.current = 0;
+      prevStability.current = 100;
       prevCompleted.current = 0;
       lastTrashRef.current = 0;
       lastSpeedRef.current = 0;
     }
   }, [state.status, state.completedTasks]);
 
-  // Trash-talk popup: stability >= 70 AND fail
+  // Trash-talk popup: fire once when crossing configured stability thresholds
   useEffect(() => {
-    if (state.status !== 'playing' || popup) return;
+    if (state.status !== 'playing' || popup) {
+      prevStability.current = state.stability;
+      return;
+    }
     const now = Date.now();
-    if (now - state.runStartTime < gameConfig.popupGracePeriodMs) { prevFailed.current = state.failedTasks; return; }
+    if (now - state.runStartTime < gameConfig.popupGracePeriodMs) {
+      prevStability.current = state.stability;
+      return;
+    }
 
-    if (state.failedTasks > prevFailed.current &&
-        state.stability >= gameConfig.trashTalkPopupMinStability &&
-        now - lastTrashRef.current > gameConfig.trashTalkPopupCooldownMs) {
+    const crossedThreshold = gameConfig.voiceStabilityThresholds.some(
+      (threshold) => prevStability.current >= threshold && state.stability < threshold
+    );
+
+    if (crossedThreshold && now - lastTrashRef.current > gameConfig.trashTalkPopupCooldownMs) {
       lastTrashRef.current = now;
       setPopup({ type: 'trashTalk', message: pick(TRASH_TALK_LINES), button: pick(ACKNOWLEDGE_BUTTONS) });
     }
-    prevFailed.current = state.failedTasks;
-  }, [state.failedTasks, state.status, state.stability, state.runStartTime, popup]);
+    prevStability.current = state.stability;
+  }, [state.status, state.stability, state.runStartTime, popup]);
 
   // Speed popup
   useEffect(() => {
@@ -94,6 +102,22 @@ export function PopupsManager() {
     }
     prevCompleted.current = state.completedTasks;
   }, [state.completedTasks, state.status, state.completionTimestamps, state.runStartTime, popup]);
+
+  // Speak popup text once (keeps voice tied to the same popup source)
+  useEffect(() => {
+    if (!popup || state.muted || !('speechSynthesis' in window)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(popup.message);
+      utterance.rate = 1.05;
+      utterance.pitch = 0.8;
+      utterance.volume = 0.75;
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      // speech synthesis unavailable
+    }
+  }, [popup, state.muted]);
 
   return (
     <AnimatePresence>

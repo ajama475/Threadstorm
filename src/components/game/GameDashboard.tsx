@@ -9,7 +9,7 @@ export function GameDashboard() {
 
   return (
     <div 
-      className="min-h-screen flex flex-col relative"
+      className="h-screen flex flex-col relative overflow-hidden"
       role="main"
       aria-label="Game dashboard"
     >
@@ -35,10 +35,10 @@ export function GameDashboard() {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex gap-4 p-4 pt-0">
+      <div className="flex-1 min-h-0 flex gap-4 p-4 pt-0 overflow-hidden">
         {/* Task Grid - Main area */}
         <div 
-          className="flex-1"
+          className="flex-1 min-h-0"
           role="region"
           aria-label="Task grid"
         >
@@ -47,7 +47,7 @@ export function GameDashboard() {
 
         {/* Alert Panel - Side */}
         <div 
-          className="w-80 flex-shrink-0"
+          className="w-80 flex-shrink-0 min-h-0"
           role="region"
           aria-label="Alert queue"
         >
