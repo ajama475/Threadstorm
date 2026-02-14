@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* COMMAND OVERLOAD - JARVIS + Modern Sci-Fi Theme */
+
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@layer base {
+  :root {
+    /* Core sci-fi dark theme */
+    --background: 220 20% 4%;
+    --foreground: 200 100% 90%;
+
+    --card: 220 25% 8%;
+    --card-foreground: 200 100% 90%;
+
+    --popover: 220 25% 8%;
+    --popover-foreground: 200 100% 90%;
+
+    /* Cyan primary - JARVIS blue */
+    --primary: 190 100% 50%;
+    --primary-foreground: 220 20% 4%;
+
+    /* Deep blue secondary */
+    --secondary: 210 80% 20%;
+    --secondary-foreground: 200 100% 90%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 200 40% 60%;
+
+    /* Cyan accent */
+    --accent: 185 100% 45%;
+    --accent-foreground: 220 20% 4%;
+
+    /* Alert colors */
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --warning: 45 100% 50%;
+    --warning-foreground: 220 20% 4%;
+
+    --success: 150 80% 45%;
+    --success-foreground: 220 20% 4%;
+
+    --border: 200 60% 25%;
+    --input: 200 60% 25%;
+    --ring: 190 100% 50%;
+
+    --radius: 0.5rem;
+
+    /* Custom glow colors */
+    --glow-cyan: 190 100% 50%;
+    --glow-blue: 210 100% 60%;
+    --glow-purple: 270 80% 60%;
+    --glow-red: 0 80% 55%;
+    --glow-yellow: 45 100% 50%;
+    --glow-green: 150 80% 45%;
+
+    /* Sidebar */
+    --sidebar-background: 220 25% 6%;
+    --sidebar-foreground: 200 100% 90%;
+    --sidebar-primary: 190 100% 50%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 210 80% 20%;
+    --sidebar-accent-foreground: 200 100% 90%;
+    --sidebar-border: 200 60% 20%;
+    --sidebar-ring: 190 100% 50%;
+  }
+
+  .dark {
+    --background: 220 20% 4%;
+    --foreground: 200 100% 90%;
+    --card: 220 25% 8%;
+    --card-foreground: 200 100% 90%;
+    --popover: 220 25% 8%;
+    --popover-foreground: 200 100% 90%;
+    --primary: 190 100% 50%;
+    --primary-foreground: 220 20% 4%;
+    --secondary: 210 80% 20%;
+    --secondary-foreground: 200 100% 90%;
+    --muted: 220 20% 15%;
+    --muted-foreground: 200 40% 60%;
+    --accent: 185 100% 45%;
+    --accent-foreground: 220 20% 4%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 60% 25%;
+    --input: 200 60% 25%;
+    --ring: 190 100% 50%;
+    --sidebar-background: 220 25% 6%;
+    --sidebar-foreground: 200 100% 90%;
+    --sidebar-primary: 190 100% 50%;
+    --sidebar-primary-foreground: 220 20% 4%;
+    --sidebar-accent: 210 80% 20%;
+    --sidebar-accent-foreground: 200 100% 90%;
+    --sidebar-border: 200 60% 20%;
+    --sidebar-ring: 190 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Rajdhani', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  code, pre, .mono {
+    font-family: 'Share Tech Mono', monospace;
+  }
+}
+
+@layer utilities {
+  /* Glow effects */
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--glow-cyan) / 0.5),
+                0 0 40px hsl(var(--glow-cyan) / 0.3),
+                inset 0 0 20px hsl(var(--glow-cyan) / 0.1);
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 20px hsl(var(--glow-blue) / 0.5),
+                0 0 40px hsl(var(--glow-blue) / 0.3),
+                inset 0 0 20px hsl(var(--glow-blue) / 0.1);
+  }
+
+  .glow-red {
+    box-shadow: 0 0 20px hsl(var(--glow-red) / 0.5),
+                0 0 40px hsl(var(--glow-red) / 0.3),
+                inset 0 0 20px hsl(var(--glow-red) / 0.1);
+  }
+
+  .glow-yellow {
+    box-shadow: 0 0 20px hsl(var(--glow-yellow) / 0.5),
+                0 0 40px hsl(var(--glow-yellow) / 0.3),
+                inset 0 0 20px hsl(var(--glow-yellow) / 0.1);
+  }
+
+  .glow-green {
+    box-shadow: 0 0 20px hsl(var(--glow-green) / 0.5),
+                0 0 40px hsl(var(--glow-green) / 0.3),
+                inset 0 0 20px hsl(var(--glow-green) / 0.1);
+  }
+
+  .text-glow-cyan {
+    text-shadow: 0 0 10px hsl(var(--glow-cyan) / 0.8),
+                 0 0 20px hsl(var(--glow-cyan) / 0.5),
+                 0 0 30px hsl(var(--glow-cyan) / 0.3);
+  }
+
+  .text-glow-red {
+    text-shadow: 0 0 10px hsl(var(--glow-red) / 0.8),
+                 0 0 20px hsl(var(--glow-red) / 0.5),
+                 0 0 30px hsl(var(--glow-red) / 0.3);
+  }
+
+  /* Hexagonal clip path */
+  .hex-clip {
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+
+  /* Sci-fi border */
+  .border-glow {
+    border: 1px solid hsl(var(--primary) / 0.5);
+    box-shadow: inset 0 0 20px hsl(var(--primary) / 0.1),
+                0 0 10px hsl(var(--primary) / 0.2);
+  }
+
+  /* Scanline effect */
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      hsl(var(--primary) / 0.03) 2px,
+      hsl(var(--primary) / 0.03) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Grid pattern background */
+  .grid-pattern {
+    background-image: 
+      linear-gradient(hsl(var(--primary) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--primary) / 0.05) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Corner accents for tiles */
+  .corner-accents::before,
+  .corner-accents::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid hsl(var(--primary));
+  }
+
+  .corner-accents::before {
+    top: -1px;
+    left: -1px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .corner-accents::after {
+    bottom: -1px;
+    right: -1px;
+    border-left: none;
+    border-top: none;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary) / 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.7);
+}
