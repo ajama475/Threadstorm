@@ -21,9 +21,32 @@ const TILE_CONFIG: { type: TaskType; label: string; description: string; hotkey:
   { type: 'track', label: 'TRACK', description: 'Follow target', hotkey: '6' },
 ];
 
+const URGENCY_PRIORITY = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+} as const;
+
+function compareAlerts(a: Alert, b: Alert) {
+  const urgencyDelta = URGENCY_PRIORITY[b.urgency] - URGENCY_PRIORITY[a.urgency];
+  if (urgencyDelta !== 0) return urgencyDelta;
+
+  const timeDelta = a.timeRemaining - b.timeRemaining;
+  if (timeDelta !== 0) return timeDelta;
+
+  const createdDelta = a.createdAt - b.createdAt;
+  if (createdDelta !== 0) return createdDelta;
+
+  return a.id.localeCompare(b.id);
+}
+
 export function TaskGrid() {
   const { state } = useGame();
   const { state: accessibilityState } = useAccessibility();
+  const activeAlert = state.activeAlertId
+    ? state.alerts.find((alert) => alert.id === state.activeAlertId) ?? null
+    : null;
 
   return (
     <div
@@ -32,7 +55,11 @@ export function TaskGrid() {
       aria-label="Task tiles grid"
     >
       {TILE_CONFIG.map((tile, index) => {
-        const pendingAlert = state.alerts.find(a => a.taskType === tile.type);
+        const alertsForType = state.alerts
+          .filter((alert) => alert.taskType === tile.type)
+          .sort(compareAlerts);
+        const bestTypeAlert = alertsForType[0];
+        const pendingAlert = activeAlert?.taskType === tile.type ? activeAlert : bestTypeAlert;
         const isFocused = accessibilityState.blindMode && accessibilityState.focusedTileIndex === index;
         const isLocked = !state.unlockedPanels.includes(tile.type);
 
@@ -47,6 +74,7 @@ export function TaskGrid() {
             isFocused={isFocused}
             tileIndex={index}
             isLocked={isLocked}
+            pendingCount={alertsForType.length}
           />
         );
       })}
@@ -63,9 +91,10 @@ interface TaskTileWrapperProps {
   isFocused: boolean;
   tileIndex: number;
   isLocked: boolean;
+  pendingCount: number;
 }
 
-function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, tileIndex, isLocked }: TaskTileWrapperProps) {
+function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, tileIndex, isLocked, pendingCount }: TaskTileWrapperProps) {
   const hasPending = !!alert;
   const urgencyClass = alert?.urgency === 'critical' ? 'border-destructive glow-red' :
                        alert?.urgency === 'high' ? 'border-warning glow-yellow' :
@@ -109,12 +138,19 @@ function TaskTileWrapper({ type, label, description, hotkey, alert, isFocused, t
             {label}
           </span>
           {hasPending && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="w-2 h-2 bg-primary rounded-full animate-pulse"
-              aria-hidden="true"
-            />
+            <div className="flex items-center gap-2">
+              {pendingCount > 1 && (
+                <span className="font-mono text-[10px] text-primary/80" aria-label={`${pendingCount} alerts queued for ${label}`}>
+                  x{pendingCount}
+                </span>
+              )}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-2 h-2 bg-primary rounded-full animate-pulse"
+                aria-hidden="true"
+              />
+            </div>
           )}
         </div>
         {alert && (

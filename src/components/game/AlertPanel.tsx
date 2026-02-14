@@ -28,9 +28,29 @@ const URGENCY_TEXT = {
   critical: 'text-destructive',
 };
 
+const URGENCY_PRIORITY = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+} as const;
+
+function compareAlerts(a: Alert, b: Alert) {
+  const urgencyDelta = URGENCY_PRIORITY[b.urgency] - URGENCY_PRIORITY[a.urgency];
+  if (urgencyDelta !== 0) return urgencyDelta;
+
+  const timeDelta = a.timeRemaining - b.timeRemaining;
+  if (timeDelta !== 0) return timeDelta;
+
+  const createdDelta = a.createdAt - b.createdAt;
+  if (createdDelta !== 0) return createdDelta;
+
+  return a.id.localeCompare(b.id);
+}
+
 export function AlertPanel() {
   const { state, selectAlert } = useGame();
-  const sortedAlerts = [...state.alerts].sort((a, b) => a.timeRemaining - b.timeRemaining);
+  const sortedAlerts = [...state.alerts].sort(compareAlerts);
 
   return (
     <motion.div

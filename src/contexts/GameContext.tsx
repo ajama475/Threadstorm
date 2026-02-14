@@ -29,6 +29,36 @@ const initialState: GameState = {
   muted: false,
 };
 
+const URGENCY_PRIORITY: Record<AlertUrgency, number> = {
+  critical: 4,
+  high: 3,
+  medium: 2,
+  low: 1,
+};
+
+function compareAlerts(a: Alert, b: Alert) {
+  const urgencyDelta = URGENCY_PRIORITY[b.urgency] - URGENCY_PRIORITY[a.urgency];
+  if (urgencyDelta !== 0) return urgencyDelta;
+
+  const timeDelta = a.timeRemaining - b.timeRemaining;
+  if (timeDelta !== 0) return timeDelta;
+
+  const createdDelta = a.createdAt - b.createdAt;
+  if (createdDelta !== 0) return createdDelta;
+
+  return a.id.localeCompare(b.id);
+}
+
+function resolveActiveAlertId(alerts: Alert[], currentActiveAlertId: string | null) {
+  if (currentActiveAlertId && alerts.some(alert => alert.id === currentActiveAlertId)) {
+    return currentActiveAlertId;
+  }
+
+  if (alerts.length === 0) return null;
+  const [nextActiveAlert] = [...alerts].sort(compareAlerts);
+  return nextActiveAlert?.id ?? null;
+}
+
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'BOOT':
@@ -76,27 +106,34 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, status: 'gameOver' };
 
     case 'ADD_ALERT':
-      if (state.alerts.some((alert) =>
-        alert.id === action.payload.id ||
-        (alert.taskType === action.payload.taskType &&
-         alert.title === action.payload.title &&
-         alert.description === action.payload.description)
-      )) {
+      if (state.alerts.some((alert) => alert.id === action.payload.id)) {
         return state;
       }
-      return { ...state, alerts: [...state.alerts, action.payload] };
+      {
+        const alerts = [...state.alerts, action.payload];
+        return {
+          ...state,
+          alerts,
+          activeAlertId: resolveActiveAlertId(alerts, state.activeAlertId),
+        };
+      }
 
     case 'REMOVE_ALERT':
-      return {
-        ...state,
-        alerts: state.alerts.filter(a => a.id !== action.payload),
-        activeAlertId: state.activeAlertId === action.payload ? null : state.activeAlertId,
-      };
+      {
+        const alerts = state.alerts.filter(a => a.id !== action.payload);
+        return {
+          ...state,
+          alerts,
+          activeAlertId: resolveActiveAlertId(alerts, state.activeAlertId === action.payload ? null : state.activeAlertId),
+        };
+      }
 
     case 'SELECT_ALERT':
       return {
         ...state,
-        activeAlertId: state.alerts.some(alert => alert.id === action.payload) ? action.payload : null,
+        activeAlertId: state.alerts.some(alert => alert.id === action.payload)
+          ? action.payload
+          : resolveActiveAlertId(state.alerts, null),
       };
 
     case 'COMPLETE_TASK': {
@@ -116,7 +153,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
 
       // Tier unlock (only during playing)
       let newTier = state.tier;
-      let newUnlocked = [...state.unlockedPanels];
+      const newUnlocked = [...state.unlockedPanels];
       if (state.status === 'playing') {
         const nextIdx = newTier + 1;
         if (nextIdx < gameConfig.unlockOrder.length &&
@@ -134,7 +171,10 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         streak: newStreak,
         maxStreak: Math.max(state.maxStreak, newStreak),
         alerts: state.alerts.filter(a => a.id !== alertId),
-        activeAlertId: state.activeAlertId === alertId ? null : state.activeAlertId,
+        activeAlertId: resolveActiveAlertId(
+          state.alerts.filter(a => a.id !== alertId),
+          state.activeAlertId === alertId ? null : state.activeAlertId
+        ),
         stability: Math.min(100, state.stability + 5),
         entropy: Math.max(0, state.entropy - 8),
         commandDebt: Math.max(0, state.commandDebt - 3),
@@ -153,16 +193,18 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         alert?.urgency === 'medium' ? 10 : 5;
 
       const newStability = state.stability - stabilityPenalty;
+      const alerts = state.alerts.map((existing) =>
+        existing.id === action.payload
+          ? { ...existing, timeRemaining: Math.max(1, existing.timeRemaining - 2) }
+          : existing
+      );
 
       return {
         ...state,
         failedTasks: state.failedTasks + 1,
         streak: 0,
-        alerts: state.alerts.map((existing) =>
-          existing.id === action.payload
-            ? { ...existing, timeRemaining: Math.max(1, existing.timeRemaining - 2) }
-            : existing
-        ),
+        alerts,
+        activeAlertId: resolveActiveAlertId(alerts, state.activeAlertId),
         stability: newStability,
         entropy: state.entropy + 10,
         commandDebt: state.commandDebt + 5,
@@ -200,7 +242,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         alerts: validAlerts,
-        activeAlertId: validAlerts.some(a => a.id === state.activeAlertId) ? state.activeAlertId : null,
+        activeAlertId: resolveActiveAlertId(validAlerts, state.activeAlertId),
         stability: Math.max(0, newStability),
         elapsedTime: state.elapsedTime + action.payload,
         failedTasks: state.failedTasks + expiredAlerts.length,

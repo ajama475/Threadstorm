@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 
 interface StartScreenProps {
@@ -14,25 +14,21 @@ export function StartScreen({ onStart }: StartScreenProps) {
   ]);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const raf = window.requestAnimationFrame(() => {
-      const active = document.activeElement;
-      const canFocus =
-        !active ||
-        active === document.body ||
-        active === document.documentElement;
+  const isEditableElement = (element: Element | null) => {
+    if (!element) return false;
+    return element instanceof HTMLInputElement ||
+      element instanceof HTMLTextAreaElement ||
+      (element as HTMLElement).isContentEditable;
+  };
 
-      if (canFocus) {
-        inputRef.current?.focus();
-      }
-    });
+  const isInteractiveElement = (element: Element | null) => {
+    if (!element) return false;
+    if (!(element instanceof HTMLElement)) return false;
+    return !!element.closest('button, a, select, summary, [role="button"], [data-no-autofocus-capture]');
+  };
 
-    return () => window.cancelAnimationFrame(raf);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = input.trim();
+  const processCommand = useCallback((rawCommand: string) => {
+    const trimmed = rawCommand.trim();
     const command = trimmed || 'START';
 
     setHistory(prev => [...prev, { text: `> ${command}`, type: 'input' }]);
@@ -58,10 +54,64 @@ export function StartScreen({ onStart }: StartScreenProps) {
       type: 'error',
     }]);
     setInput('');
+  }, [capsWarningShown, onStart]);
+
+  useEffect(() => {
+    const raf = window.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      const canFocus =
+        !active ||
+        active === document.body ||
+        active === document.documentElement;
+
+      if (canFocus) {
+        inputRef.current?.focus();
+      }
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+      const active = document.activeElement;
+      if (active === inputRef.current || isEditableElement(active)) return;
+      if (isInteractiveElement(active)) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+
+      const isPrintable = event.key.length === 1;
+      const isEnter = event.key === 'Enter';
+      if (!isPrintable && !isEnter) return;
+
+      inputRef.current?.focus();
+
+      if (isEnter) {
+        event.preventDefault();
+        processCommand(input);
+        return;
+      }
+
+      event.preventDefault();
+      setInput(prev => prev + event.key);
+    };
+
+    window.addEventListener('keydown', handleWindowKeyDown);
+    return () => window.removeEventListener('keydown', handleWindowKeyDown);
+  }, [input, processCommand]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    processCommand(input);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative scanlines">
+    <div
+      className="min-h-screen flex items-center justify-center relative scanlines"
+      onMouseDownCapture={(event) => {
+        if (isEditableElement(event.target as Element) || isInteractiveElement(event.target as Element)) return;
+        window.requestAnimationFrame(() => inputRef.current?.focus());
+      }}
+    >
       {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden">
         <motion.div
